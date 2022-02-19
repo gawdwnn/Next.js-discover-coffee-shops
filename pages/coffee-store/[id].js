@@ -7,6 +7,7 @@ import cls from "classnames";
 import styles from "../../styles/coffee-store.module.css";
 import { fetchCoffeeStores } from "../../lib/coffee-stores";
 import { StoreContext } from "../../store/store-context";
+import { fetcher, isEmpty } from "../../utils";
 
 export async function getStaticProps(staticProps) {
   const params = staticProps.params;
@@ -48,7 +49,49 @@ const CoffeeStore = (initialProps) => {
     state: { coffeeStores },
   } = useContext(StoreContext);
 
-  const { address, name, neighbourhood, imgUrl } = coffeeStore;
+  const handleCreateCoffeeStore = async (coffeeStore) => {
+    try {
+      const { id, name, voting, imgUrl, neighbourhood, address } = coffeeStore;
+      const response = await fetch("/api/createCoffeeStore", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id,
+          name,
+          voting: 0,
+          imgUrl,
+          neighbourhood: neighbourhood || "",
+          address: address || "",
+        }),
+      });
+
+      const dbCoffeeStore = await response.json();
+    } catch (err) {
+      console.error("Error creating coffee store", err);
+    }
+  };
+
+  useEffect(() => {
+    if (isEmpty(initialProps.coffeeStore)) {
+      if (coffeeStores.length > 0) {
+        const coffeeStoreFromContext = coffeeStores.find((coffeeStore) => {
+          return coffeeStore.id.toString() === id; //dynamic id
+        });
+
+        if (coffeeStoreFromContext) {
+          setCoffeeStore(coffeeStoreFromContext);
+          handleCreateCoffeeStore(coffeeStoreFromContext);
+        }
+      }
+    } else {
+      // Server Side Regeneration
+      handleCreateCoffeeStore(initialProps.coffeeStore);
+    }
+  }, [id, initialProps, initialProps.coffeeStore, coffeeStores]);
+
+  const { address = "", name = "", neighbourhood = "", imgUrl = "" } = coffeeStore;
 
   const handleUpvoteButton = () => {};
 
